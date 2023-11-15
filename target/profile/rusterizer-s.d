@@ -1,0 +1,1 @@
+C:\Users\santi\Github\RusterizerS\target\profile\rusterizer-s.exe: C:\Users\santi\Github\RusterizerS\src\data\mod.rs C:\Users\santi\Github\RusterizerS\src\display\mod.rs C:\Users\santi\Github\RusterizerS\src\main.rs C:\Users\santi\Github\RusterizerS\src\renderer.rs
