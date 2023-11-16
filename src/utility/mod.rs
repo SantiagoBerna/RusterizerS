@@ -1,4 +1,5 @@
-use glam::{Vec2};
+
+use glam::Vec2;
 
 pub fn u8_to_f32(v: u8) -> f32 {
     (v as f32) / 255.0
