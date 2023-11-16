@@ -7,6 +7,7 @@ use crate::data::sampler::Sampler;
 use crate::display::Surface;
 use crate::utility::*;
 
+use glam::BVec3;
 use glam::Mat2;
 use glam::Mat3;
 use glam::Mat4;
@@ -64,7 +65,7 @@ impl Renderer {
         }
     }
 
-    fn draw_triangle(&self, surface: &mut Surface, vertices: &VertexSet, mvp: Mat4, indices: [u32; 3])
+    fn draw_triangle(&self, surface: &mut Surface, vertices: &VertexSet, mvp: Mat4, indices: [u32; 3]) -> Option<()>
     {
         let vertex_position = vertices.get_attribute(VertexAttributes::Position).unwrap();
 
@@ -76,17 +77,18 @@ impl Renderer {
         let clip_2 = mvp * v2.extend(1.0);
         let clip_3 = mvp * v3.extend(1.0);
 
+        //Clipping occurs here
+
+
         let w1 = 1.0 / clip_1.w;
         let w2 = 1.0 / clip_2.w;
         let w3 = 1.0 / clip_3.w;
-
-        //Apply depth culling
-        //...
 
         //Homogenous divide
         let ndc_1 = clip_1 * w1;
         let ndc_2 = clip_2 * w2;
         let ndc_3 = clip_3 * w3;
+        //Apply depth culling
 
         //Map to screen space
         let to_screen_space = Mat3::from_scale_angle_translation(
@@ -105,42 +107,44 @@ impl Renderer {
             UVec2::new(surface.get_width() as u32, surface.get_height() as u32)
         );
 
-        let triangle_screen_bounds = triangle_bounds.intersect(&screen_bounds);
+        let bounds = triangle_bounds.intersect(&screen_bounds)?;
+        
+        let mut range: f32 = 1.0;
 
-        if let Some(bounds) = triangle_screen_bounds {
+        for j in bounds.start.y..bounds.end.y {
+            for i in bounds.start.x..bounds.end.x {
 
-            for j in bounds.start.y..bounds.end.y {
-                for i in bounds.start.x..bounds.end.x {
+                let pixel_index = j as usize * surface.get_width() + i as usize;
+                let point = Vec2::new(i as f32 + 0.5, j as f32 + 0.5);
 
-                    let pixel_index = j as usize * surface.get_width() + i as usize;
-                    let point = Vec2::new(i as f32 + 0.5, j as f32 + 0.5);
+                let in_triangle = barycentric_weights(point, screen_1.xy(), screen_2.xy(), screen_3.xy());
+                if let Some(weights) = in_triangle {
 
-                    let in_triangle = barycentric_weights(point, screen_1.xy(), screen_2.xy(), screen_3.xy());
-                    if let Some(weights) = in_triangle {
+                    //let depth = ndc_1.z * weights.x + ndc_2.z * weights.y + ndc_3.z * weights.z;
+                    let depth = weights.dot(Vec3::new(ndc_1.z, ndc_2.z, ndc_3.z));
+                    let prev_depth = surface.get_depth(pixel_index);
 
-                        let depth = ndc_1.z * weights.x + ndc_2.z * weights.y + ndc_3.z * weights.z;
-                        let prev_depth = surface.get_depth(pixel_index);
+                    if depth <= prev_depth {
 
-                        if depth <= prev_depth {
+                        surface.set_depth(pixel_index, depth);
+                        range = range.min(depth);
 
-                            surface.set_depth(pixel_index, depth);
+                        let uv_data = vertices.get_attribute(VertexAttributes::TextureUV).unwrap();
 
-                            let uv_data = vertices.get_attribute(VertexAttributes::TextureUV).unwrap();
+                        let uv_1 = Vec2::from_slice(&uv_data[component_range(indices[0] as usize, 2)]) * w1;
+                        let uv_2 = Vec2::from_slice(&uv_data[component_range(indices[1] as usize, 2)]) * w2;
+                        let uv_3 = Vec2::from_slice(&uv_data[component_range(indices[2] as usize, 2)]) * w3;
 
-                            let uv_1 = Vec2::from_slice(&uv_data[component_range(indices[0] as usize, 2)]) * w1;
-                            let uv_2 = Vec2::from_slice(&uv_data[component_range(indices[1] as usize, 2)]) * w2;
-                            let uv_3 = Vec2::from_slice(&uv_data[component_range(indices[2] as usize, 2)]) * w3;
+                        let depth_correction = 1.0 / (w1 * weights.x + w2 * weights.y + w3 * weights.z);
+                        let uv_coordinate = (uv_1 * weights.x + uv_2 * weights.y + uv_3 * weights.z) * depth_correction;
 
-                            let depth_correction = 1.0 / (w1 * weights.x + w2 * weights.y + w3 * weights.z);
-                            let uv_coordinate = (uv_1 * weights.x + uv_2 * weights.y + uv_3 * weights.z) * depth_correction;
-
-                            let colour = self.texture_slots[0].as_ref().unwrap().sample(uv_coordinate.x, 1.0 - uv_coordinate.y);
-                            surface.set_pixel_index(from_f32_rgb(colour.x, colour.y, colour.z), pixel_index);   
-                        }
+                        let colour = self.texture_slots[0].as_ref().unwrap().sample(uv_coordinate.x, 1.0 - uv_coordinate.y);
+                        surface.set_pixel_index(from_f32_rgb(colour.x, colour.y, colour.z), pixel_index);   
                     }
                 }
             }
         }
+        Some(())
     }
 }
 
@@ -174,4 +178,22 @@ fn barycentric_weights(point: Vec2, edge_1: Vec2, edge_2: Vec2, edge_3: Vec2) ->
 
     if bary.x >= 0.0 && bary.y >= 0.0 && bary.z >= 0.0 { Some(bary) }
     else { None }
+}
+
+fn clip_triangle(v1: Vec3, v2: Vec3, v3: Vec3) -> Option<(Vec3, Vec3, Vec3)> {
+    if cull_face(v1, v2, v3) {
+        Some((v1, v2, v3))
+    } else {
+        None
+    }
+}
+
+fn cull_face(v1: Vec3, v2: Vec3, v3: Vec3) -> bool {
+
+    let edge_1 = v2.xyz() - v1.xyz();
+    let edge_2 = v3.xyz() - v1.xyz();
+
+    //We check if its facing
+    let normal = edge_1.cross(edge_2);
+    normal.z <= 0.0
 }

@@ -137,7 +137,7 @@ fn main() {
         angle = angle + dt;
 
         //Rendering
-        surface.clear(0, f32::INFINITY);
+        surface.clear(0, 1.0);
 
         for i in 0..4 {
 
@@ -150,9 +150,6 @@ fn main() {
 
         let model_matrix = Mat4::from_rotation_y(-PI * 0.5);
         renderer.draw_buffer(&mut surface, &model_matrix, &vertex_data, 2);
-
-        // let model_matrix = Mat4::from_rotation_y(-PI * 0.5);
-        // renderer.draw_buffer(&mut surface, &model_matrix, &vertex_data, 2);
 
         window.update_with_buffer(surface.data(), RESOLUTION_WIDTH, RESOLUTION_HEIGHT).unwrap();
 
