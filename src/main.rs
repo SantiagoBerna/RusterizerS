@@ -1,6 +1,5 @@
 
 
-use data::buffer::IBuffer;
 use data::vertex_set::VertexSet;
 use glam::Quat;
 use minifb::MouseMode;
@@ -48,26 +47,26 @@ fn main() {
     let mut renderer = Renderer::new();
     let mut surface = Surface::new(RESOLUTION_WIDTH, RESOLUTION_HEIGHT);
 
-    let triangle_vertices = Arc::new(buffer::FBuffer::new( vec![
+    let triangle_vertices = Arc::new(vec![
 
-        -0.5,  0.5, -1.5,
-        -0.5, -0.5, -1.5,
-        0.5, -0.5, -1.5,
-        0.5,  0.5, -1.5,
+        -0.5,  0.5, 0.5,
+        -0.5, -0.5, 0.5,
+        0.5, -0.5, 0.5,
+        0.5,  0.5, 0.5,
         
-    ]));
+    ]);
 
-    let triange_uvs = Arc::new(buffer::FBuffer::new( vec![
+    let triange_uvs = Arc::new(vec![
         0.0, 1.0,
         0.0, 0.0,
         1.0, 0.0,
         1.0, 1.0
-    ]));
+    ]);
 
-    let triangle_indices = Arc::new(IBuffer::new(vec![
+    let triangle_indices = Arc::new(vec![
         0, 1, 2,
         2, 3, 0
-    ]));
+    ]);
 
     let mut vertex_data = VertexSet::new();
     vertex_data.set_attribute(vertex_set::VertexAttributes::Position, triangle_vertices);
@@ -75,50 +74,37 @@ fn main() {
     vertex_data.set_indices(triangle_indices);
 
     let image_result = load_texture_from_file(Path::new("assets/rock.jpg"));
-    let (_texture, sampler) = image_result.unwrap();
+    let sampler = image_result.unwrap();
 
     renderer.set_sampler(TextureSlot::Diffuse, Some(sampler));
 
     renderer.projection_matrix = glam::Mat4::perspective_rh(
         PI / 4.0,
         RESOLUTION_WIDTH as f32 / RESOLUTION_HEIGHT as f32,
-        1.0, 10.0
+        0.1, 100.0
     );
 
     let mut angle = 0.0;
-
     let mut camera_pos = Vec3::new(0.0, 0.0, 0.0);
     let mut camera_rot = Vec2::default();
-
     let mut prev_mouse_pos = Vec2::default();
-    let mut mouse_pos = Vec2::default();
+    let mut mouse_pos = prev_mouse_pos;
+    let mut dt = 0.0;
+
 
     while window.is_open() {
 
         let now = Instant::now();
 
-
-
-        surface.clear(0, f32::INFINITY);
-
-        let model_matrix = 
-            Mat4::from_translation(Vec3::new(0.0, 0.0, -1.0)) * Mat4::from_rotation_y(0.0);
-            
-        renderer.draw_buffer(&mut surface, &model_matrix, &vertex_data, 2);
-
-        window.update_with_buffer(surface.data(), RESOLUTION_WIDTH, RESOLUTION_HEIGHT).unwrap();
-
-        println!("{}", now.elapsed().as_millis());
-        let dt = now.elapsed().as_secs_f32();
-
+        //Input
         if let Some((x, y)) = window.get_mouse_pos(MouseMode::Discard) {
             prev_mouse_pos = mouse_pos;
             mouse_pos = Vec2::new(x, y);
             let mouse_delta = mouse_pos - prev_mouse_pos;
 
             if window.get_mouse_down(minifb::MouseButton::Right) {
-                camera_rot.x = camera_rot.x - mouse_delta.x * dt * 0.1;
-                camera_rot.y = camera_rot.y - mouse_delta.y * dt * 0.1;
+                camera_rot.x = camera_rot.x - mouse_delta.x * 0.01;
+                camera_rot.y = camera_rot.y - mouse_delta.y * 0.01;
                 camera_rot.y = camera_rot.y.clamp(-PI / 2.1, PI / 2.1);
             }
         }
@@ -142,8 +128,6 @@ fn main() {
              camera_pos
         );
 
-        
-
         renderer.view_matrix = glam::Mat4::look_at_rh(
             camera_pos,
             camera_pos + camera_transform.transform_vector3(Vec3::new(0.0, 0.0, -1.0)),
@@ -151,5 +135,29 @@ fn main() {
         );
 
         angle = angle + dt;
+
+        //Rendering
+        surface.clear(0, f32::INFINITY);
+
+        for i in 0..4 {
+
+            let model_matrix = Mat4::from_rotation_x(i as f32 * PI * 0.5);
+            renderer.draw_buffer(&mut surface, &model_matrix, &vertex_data, 2);
+        }
+
+        let model_matrix = Mat4::from_rotation_y(PI * 0.5);
+        renderer.draw_buffer(&mut surface, &model_matrix, &vertex_data, 2);
+
+        let model_matrix = Mat4::from_rotation_y(-PI * 0.5);
+        renderer.draw_buffer(&mut surface, &model_matrix, &vertex_data, 2);
+
+        // let model_matrix = Mat4::from_rotation_y(-PI * 0.5);
+        // renderer.draw_buffer(&mut surface, &model_matrix, &vertex_data, 2);
+
+        window.update_with_buffer(surface.data(), RESOLUTION_WIDTH, RESOLUTION_HEIGHT).unwrap();
+
+        println!("{}", now.elapsed().as_millis());
+        dt = now.elapsed().as_secs_f32();
+
     }
 }

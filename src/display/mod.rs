@@ -1,16 +1,14 @@
-use crate::data::buffer::FBuffer;
-
 
 const RESOLUTION_LIMIT: (usize, usize) = (65536, 65536);
 
 //A pixel buffer that uses normalized coordinates for access
 pub struct Surface {
-    
+
     width: usize,
     height: usize,
 
     colour_buffer: Vec<u32>,
-    depth_buffer: FBuffer
+    depth_buffer: Vec<f32>
 }
 
 impl Surface {
@@ -22,7 +20,7 @@ impl Surface {
         Self {
             width, height, 
             colour_buffer: vec![0; width * height],
-            depth_buffer: FBuffer::new(vec![f32::INFINITY; width * height])
+            depth_buffer: vec![f32::INFINITY; width * height]
         }
     }
 
@@ -47,11 +45,11 @@ impl Surface {
     }
 
     pub fn get_depth(&self, index: usize) -> f32 {
-        self.depth_buffer.data()[index]
+        self.depth_buffer[index]
     }
 
     pub fn set_depth(&mut self, index: usize, value: f32) {
-        self.depth_buffer.set(index, value);
+        self.depth_buffer[index] = value;
     }
 
     pub fn data(&self) -> &[u32] {
