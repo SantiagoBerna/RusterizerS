@@ -91,15 +91,19 @@ impl Renderer {
         let inv_w2 = 1.0 / proj_2.w;
         let inv_w3 = 1.0 / proj_3.w;
 
-        //Homogenous divide
-        let ndc_1 = proj_1.xyz() * inv_w1;
-        let ndc_2 = proj_2.xyz() * inv_w2;
-        let ndc_3 = proj_3.xyz() * inv_w3;
+        if should_cull_face(v1 * inv_w1, v2 * inv_w2, v3 * inv_w2) {
+            return None
+        }
 
         //Clipping occurs here
-        let (clip_1, clip_2, clip_3) = clip_triangle(ndc_1, ndc_2, ndc_3)?;
+        let (clip_1, clip_2, clip_3) = clip_triangle(proj_1, proj_2, proj_3)?;
 
-        self.raster_triangle(surface, indices, clip_1.extend(inv_w1), clip_2.extend(inv_w2), clip_3.extend(inv_w3));
+        //Homogenous divide
+        let ndc_1 = clip_1.xyz() * inv_w1;
+        let ndc_2 = clip_2.xyz() * inv_w2;
+        let ndc_3 = clip_3.xyz() * inv_w3;
+
+        self.raster_triangle(surface, indices, ndc_1.extend(inv_w1), ndc_2.extend(inv_w2), ndc_3.extend(inv_w3));
 
         Some(())
     }
@@ -198,11 +202,7 @@ fn barycentric_weights(point: Vec2, edge_1: Vec2, edge_2: Vec2, edge_3: Vec2) ->
     else { None }
 }
 
-fn clip_triangle(v1: Vec3, v2: Vec3, v3: Vec3) -> Option<(Vec3, Vec3, Vec3)> {
-    
-    if should_cull_face(v1, v2, v3) {
-        return None
-    }
+fn clip_triangle(v1: Vec4, v2: Vec4, v3: Vec4) -> Option<(Vec4, Vec4, Vec4)> {
     
     if let Some(_bool) = triangle_in_bounds(v1, v2, v3) {
         Some((v1, v2, v3))
@@ -215,22 +215,23 @@ fn in_range(val: f32, min: f32, max: f32) -> bool {
     val > min && val < max
 }
 
-fn triangle_in_bounds(v1: Vec3, v2: Vec3, v3: Vec3) -> Option<BVec3> {
+fn triangle_in_bounds(v1: Vec4, v2: Vec4, v3: Vec4) -> Option<BVec3> {
 
     let v1_in_range = 
-        in_range(v1.x, -1.0, 1.0) &&
-        in_range(v1.y, -1.0, 1.0) &&
-        in_range(v1.z, 0.0, 1.0);
+        in_range(v1.x, -v1.w, v1.w) &&
+        in_range(v1.y, -v1.w, v1.w) &&
+        in_range(v1.z, 0.0, v1.w);
 
     let v2_in_range = 
-        in_range(v2.x, -1.0, 1.0) &&
-        in_range(v2.y, -1.0, 1.0) &&
-        in_range(v2.z, 0.0, 1.0);
+        in_range(v2.x, -v2.w, v2.w) &&
+        in_range(v2.y, -v2.w, v2.w) &&
+        in_range(v2.z, 0.0, v2.w);
+
 
     let v3_in_range = 
-        in_range(v3.x, -1.0, 1.0) &&
-        in_range(v3.y, -1.0, 1.0) &&
-        in_range(v3.z, 0.0, 1.0);
+        in_range(v3.x, -v3.w, v3.w) &&
+        in_range(v3.y, -v3.w, v3.w) &&
+        in_range(v3.z, 0.0, v3.w);
 
     if v1_in_range || v2_in_range || v3_in_range {
         Some(BVec3::new(v1_in_range, v2_in_range, v3_in_range))
@@ -247,9 +248,4 @@ fn should_cull_face(v1: Vec3, v2: Vec3, v3: Vec3) -> bool {
     //We check if its facing +z
     let normal = edge_1.cross(edge_2);
     normal.dot(-Vec3::Z) >= 0.0
-}
-
-enum TriangleClipResult {
-    One(Vec4, Vec4, Vec4),
-    Two((Vec4, Vec4, Vec4), (Vec4, Vec4, Vec4))
 }
