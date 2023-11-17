@@ -9,6 +9,7 @@ pub enum VertexAttributes {
     MaxAttributes
 }
 
+#[derive(Clone)]
 pub struct VertexSet {
     indices: Option<Arc<Vec<u32>>>,
     attributes: Vec<Option<Arc<Vec<f32>>>>

@@ -76,16 +76,14 @@ fn main() {
     let image_result = load_texture_from_file(Path::new("assets/rock.jpg"));
     let sampler = image_result.unwrap();
 
-    renderer.set_sampler(TextureSlot::Diffuse, Some(sampler));
-
     renderer.projection_matrix = glam::Mat4::perspective_rh(
         PI / 4.0,
         RESOLUTION_WIDTH as f32 / RESOLUTION_HEIGHT as f32,
-        0.1, 100.0
+        0.01, 100.0
     );
 
     let mut angle = 0.0;
-    let mut camera_pos = Vec3::new(0.0, 0.0, 0.0);
+    let mut camera_pos = Vec3::new(0.0, 0.0, 10.0);
     let mut camera_rot = Vec2::default();
     let mut prev_mouse_pos = Vec2::default();
     let mut mouse_pos = prev_mouse_pos;
@@ -128,28 +126,31 @@ fn main() {
              camera_pos
         );
 
+        angle = angle + dt;
+
+        //Rendering
+        surface.clear(0, 1.0);
+
         renderer.view_matrix = glam::Mat4::look_at_rh(
             camera_pos,
             camera_pos + camera_transform.transform_vector3(Vec3::new(0.0, 0.0, -1.0)),
             Vec3::new(0.0, 1.0, 0.0)
         );
 
-        angle = angle + dt;
-
-        //Rendering
-        surface.clear(0, 1.0);
+        renderer.bind_vertex_set(Some(vertex_data.clone()));
+        renderer.bind_sampler(TextureSlot::Diffuse, Some(sampler.clone()));
 
         for i in 0..4 {
 
             let model_matrix = Mat4::from_rotation_x(i as f32 * PI * 0.5);
-            renderer.draw_buffer(&mut surface, &model_matrix, &vertex_data, 2);
+            renderer.draw_buffer(&mut surface, &model_matrix, 2);
         }
 
         let model_matrix = Mat4::from_rotation_y(PI * 0.5);
-        renderer.draw_buffer(&mut surface, &model_matrix, &vertex_data, 2);
+        renderer.draw_buffer(&mut surface, &model_matrix, 2);
 
         let model_matrix = Mat4::from_rotation_y(-PI * 0.5);
-        renderer.draw_buffer(&mut surface, &model_matrix, &vertex_data, 2);
+        renderer.draw_buffer(&mut surface, &model_matrix, 2);
 
         window.update_with_buffer(surface.data(), RESOLUTION_WIDTH, RESOLUTION_HEIGHT).unwrap();
 
