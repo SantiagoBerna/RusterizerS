@@ -5,8 +5,6 @@ use stb_image::image::LoadResult::*;
 
 pub mod vertex_set;
 
-pub mod bounding_box;
-
 pub mod sampler;
 use sampler::*;
 

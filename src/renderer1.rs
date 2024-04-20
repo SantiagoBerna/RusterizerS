@@ -5,7 +5,8 @@ use crate::data::vertex_set::VertexAttributes;
 use crate::data::sampler::Sampler;
 
 use crate::display::Surface;
-use crate::utility::*;
+use crate::utils;
+use crate::utils::*;
 
 use glam::BVec3;
 use glam::BVec4;
@@ -153,7 +154,7 @@ impl Renderer {
                         let uv_coordinate = (uv_1 * weights.x + uv_2 * weights.y + uv_3 * weights.z) * depth_correction;
 
                         let colour = self.texture_slots[0].as_ref().unwrap().sample(uv_coordinate.x, 1.0 - uv_coordinate.y);
-                        surface.set_pixel_index(from_f32_rgb(colour.x, colour.y, colour.z), pixel_index);   
+                        surface.set_pixel_index(utils::f32_to_hex(colour.w, colour.x, colour.y, colour.z), pixel_index);   
                     }
                 }
             }
