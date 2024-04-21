@@ -5,33 +5,8 @@ use glam::Vec3;
 use glam::Vec4;
 
 pub mod bounding_box;
-use bounding_box::*;
-
+pub mod colour;
 pub mod plane;
-
-
-pub fn u8_to_f32(v: u8) -> f32 {
-    (v as f32) / 255.0
-}
-
-pub fn f32_to_u8(v: f32) -> u8 {
-    let clamped = v.clamp(0.0, 1.0);
-    (clamped * 255.0) as u8
-}
-
-pub fn u8_to_hex(a: u8, r: u8, g: u8, b: u8) -> u32 {
-    let (a, r, g, b) = (a as u32, r as u32, g as u32, b as u32);
-    (a << 24) | (r << 16) | (g << 8) | b
-}
-
-pub fn f32_to_hex(a: f32, r: f32, g: f32, b: f32) -> u32 {
-    u8_to_hex(
-        f32_to_u8(a),
-        f32_to_u8(r),
-        f32_to_u8(g),
-        f32_to_u8(b)
-    )
-}
 
 pub fn cull_back_face(v1: Vec3, v2: Vec3, v3: Vec3) -> bool {
 
@@ -54,11 +29,19 @@ pub fn homogenous_clip(a: Vec4, b: Vec4, plane: Vec4) -> Option<f32> {
     else { None }
 }
 
-pub fn clip_homogenous_triangle(vertices: &[Vec4; 3]) -> Vec<(Vec4, f32)> {
+pub fn clip_homogenous_triangle(vertices: &[Vec4; 3]) -> Vec<(Vec4, Vec3)> {
 
-    let mut output_list: Vec<(Vec4, f32)> = vertices.iter()
+    let mut output_list: Vec<(Vec4, Vec3)> = vertices.iter()
         .enumerate()
-        .map(|(i, v)| { (v.clone(), i as f32)})
+        .map(|(i, v)| {
+            if i == 0 {
+                (v.clone(), Vec3::X)
+            } else if i == 1 {
+                (v.clone(), Vec3::Y)
+            } else {
+                (v.clone(), Vec3::Z)
+            }
+        })
         .collect();
 
     let clip_planes = [
@@ -81,10 +64,6 @@ pub fn clip_homogenous_triangle(vertices: &[Vec4; 3]) -> Vec<(Vec4, f32)> {
             let next_point = input_list[(i+1) % input_list.len()];
 
             let current_inside = plane.dot(current_point.0) >= 0.0;
-           
-            if current_point.0.z < 0.0 {
-                dbg!(current_point.0);
-            };
 
             if current_inside {
                 output_list.push(current_point);
@@ -93,15 +72,19 @@ pub fn clip_homogenous_triangle(vertices: &[Vec4; 3]) -> Vec<(Vec4, f32)> {
             if let Some(t) = homogenous_clip(current_point.0, next_point.0, plane) {
 
                 let interpolated = lerp(current_point.0, next_point.0, t);
-                let original_edge = current_point.1.floor();
-                let hint = original_edge + t;
-
-                output_list.push((interpolated, hint));
+                let barycentric_coords =  lerp(current_point.1, next_point.1, t);
+                output_list.push((interpolated, barycentric_coords));
             }
         }
     }
 
     output_list
+}
+
+pub fn barycentric_lerp<T>(weights: Vec3, v1: T, v2: T, v3: T) -> T 
+where T: std::ops::Mul<f32, Output = T> + std::ops::Add<Output = T>
+{
+    (v1 * weights.x) + (v2 * weights.y) + (v3 * weights.z)
 }
 
 pub fn should_cull_triangle(v1: Vec4, v2: Vec4, v3: Vec4) -> bool {
@@ -139,11 +122,11 @@ pub fn edge_function(p: Vec2, a: Vec2, b: Vec2) -> f32 {
     edge.x * to_p.y - edge.y * to_p.x
 }
 
-pub fn generate_triangle_bounding_box(v1: Vec2, v2: Vec2, v3: Vec2) -> BoundingBox {
+pub fn generate_triangle_bounding_box(v1: Vec2, v2: Vec2, v3: Vec2) -> bounding_box::BoundingBox {
     let v_max = v1.max(v2).max(v3).round();
     let v_min = v1.min(v2).min(v3).round();
     
-    BoundingBox { start: v_min.as_uvec2(), end: v_max.as_uvec2() }
+    bounding_box::BoundingBox { start: v_min.as_uvec2(), end: v_max.as_uvec2() }
 }
 
 pub fn triangle_in_bounds(v1: Vec4, v2: Vec4, v3: Vec4) -> bool {

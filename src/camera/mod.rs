@@ -1,4 +1,3 @@
-
 use crate::math::plane::Plane;
 
 #[derive(Default, Clone)]
@@ -78,7 +77,6 @@ pub fn first_person_controls(camera : &mut Camera, input: &minifb::Window, mouse
         camera.euler_rotation.y = camera.euler_rotation.y.clamp(
             -std::f32::consts::PI * 0.49, std::f32::consts::PI * 0.49
         );
-
     }
 
     let camera_front = camera.get_front();

@@ -1,8 +1,8 @@
 use std::path::Path;
 use stb_image::image;
+use crate::math;
 
-use crate::math::u8_to_hex;
-
+#[derive(Default)]
 pub struct Texture {
     data: Vec<u32>,
     width: usize,
@@ -31,11 +31,11 @@ fn load_image_memory(image: &image::Image<u8>) -> Texture {
     let size = image.width * image.height;
     let mut out_data: Vec<u32> = Vec::with_capacity(size);
 
-    if (channels == 3) {
+    if channels == 3 {
         for i in 0..size {
             let index = i * 3;
             out_data.push(
-                u8_to_hex(255,
+                math::colour::u8_to_hex(255,
                     image.data[index],
                     image.data[index + 1],
                     image.data[index + 2]
@@ -43,11 +43,11 @@ fn load_image_memory(image: &image::Image<u8>) -> Texture {
             );
         }
     }
-    else if (channels == 4) {
+    else if channels == 4 {
         for i in 0..size {
             let index = i * 4;
             out_data.push(
-                u8_to_hex(image.data[index + 3],
+                math::colour::u8_to_hex(image.data[index + 3],
                     image.data[index],
                     image.data[index + 1],
                     image.data[index + 2]
@@ -124,5 +124,18 @@ impl DepthTexture {
     pub fn depth_test(&mut self, i: usize, j: usize, depth_val: f32) -> bool {
         if depth_val < self.read(i, j) { self.write(i, j, depth_val); true}
         else { false }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct Sampler {
+
+}
+
+impl Sampler {
+    pub fn sample(&self, texture: &Texture, uv: glam::Vec2) -> glam::Vec4 {
+        let dimensions = ((texture.width() - 1) as f32, (texture.height() - 1) as f32);
+        let (i, j) = (uv.x * dimensions.0, (1.0 - uv.y) * dimensions.1);
+        math::colour::hex_to_f32(texture.read(i.round() as usize, j.round() as usize))
     }
 }
