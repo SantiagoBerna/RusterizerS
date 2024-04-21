@@ -95,11 +95,13 @@ impl VertexShader {
 
                 //forward all attributes
                 if clipped_vertices[i].1.fract().abs() < std::f32::EPSILON {
-                    out_vertex.colours.push(vertex_in.colours[indices[origin_edge]]);
+                    out_vertex.colours.push(vertex_in.colours[triangle_indices[origin_edge]]);
+                    
                 } else {
+
                     let alpha = clipped_vertices[i].1.fract();
-                    let colour_1 = vertex_in.colours[indices[origin_edge]];
-                    let colour_2 = vertex_in.colours[indices[(origin_edge + 1) % 3]];
+                    let colour_1 = vertex_in.colours[triangle_indices[origin_edge]];
+                    let colour_2 = vertex_in.colours[triangle_indices[(origin_edge + 1) % 3]];
     
                     let result = math::lerp(colour_1, colour_2, alpha);
                     out_vertex.colours.push(result);
@@ -186,9 +188,9 @@ impl FragmentShader {
                     let depth = weights.dot(Vec3::new(v1.z, v2.z, v3.z));
 
                     if depth_buffer.depth_test(i, j, depth) {
-
+                        
                         let depth_correction = 1.0 / (v1.w * weights.x + v2.w * weights.y + v3.w * weights.z);
-                        let colour = (colour1 * v1.w * weights.x) + (colour2 * v2.w * weights.y) + (colour3 * v3.w * weights.z) * depth_correction;
+                        let colour = ((colour1 * v1.w * weights.x) + (colour2 * v2.w * weights.y) + (colour3 * v3.w * weights.z)) * depth_correction;
 
                         out.write(i, j, math::f32_to_hex(1.0, colour.x, colour.y, colour.z));
                     }
