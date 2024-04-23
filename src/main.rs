@@ -71,8 +71,8 @@ fn main() {
     let mut fs = fragment::FragmentShader::default();
     let mut ls = debug::DebugLineShader::default();
 
-    //let texture = load_image_file(Path::new("assets/the_rock.jpeg")).unwrap();
-    let texture = load_image_file(std::path::Path::new("assets/icon.png")).unwrap();
+    let texture = load_image_file(std::path::Path::new("assets/the_rock.jpeg")).unwrap();
+    //let texture = load_image_file(std::path::Path::new("assets/icon.png")).unwrap();
     fs.mesh_texture = texture;
 
     //Setting up vertices
@@ -106,7 +106,7 @@ fn main() {
         vs.projection = projection;
 
         //clear
-        output_surface.clear(math::colour::f32_to_hex(1.0, 0.0, 0.0, 0.0));
+        output_surface.clear(colour::f32_to_hex(1.0, 0.0, 0.0, 0.0));
         depth_attachment.clear(1.0);
 
         //draw
