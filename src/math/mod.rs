@@ -45,10 +45,10 @@ pub fn clip_homogenous_triangle(vertices: &[Vec4; 3]) -> Vec<(Vec4, Vec3)> {
         .collect();
 
     let clip_planes = [
-        Vec4::new(1.0, 0.0, 0.0, 1.0),
-        Vec4::new(-1.0, 0.0, 0.0, 1.0),
-        Vec4::new(0.0, 1.0, 0.0, 1.0),
-        Vec4::new(0.0, -1.0, 0.0, 1.0),
+        Vec4::new(1.0, 0.0, 0.0, 1.0), //Left
+        Vec4::new(-1.0, 0.0, 0.0, 1.0), //Right
+        Vec4::new(0.0, 1.0, 0.0, 1.0), //Bottom
+        Vec4::new(0.0, -1.0, 0.0, 1.0), //Top
         Vec4::new(0.0, 0.0, 1.0, 0.0), //Near
         Vec4::new(0.0, 0.0, -1.0, 1.0), //Far
     ];

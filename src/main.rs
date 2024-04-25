@@ -71,8 +71,7 @@ fn main() {
     let mut fs = fragment::FragmentShader::default();
     let mut ls = debug::DebugLineShader::default();
 
-    let texture = load_image_file(std::path::Path::new("assets/the_rock.jpeg")).unwrap();
-    //let texture = load_image_file(std::path::Path::new("assets/icon.png")).unwrap();
+    let texture = load_image_file(std::path::Path::new("assets/icon.png")).unwrap();
     fs.mesh_texture = texture;
 
     //Setting up vertices
@@ -110,8 +109,21 @@ fn main() {
         depth_attachment.clear(1.0);
 
         //draw
-        let (t, i) = vs.dispatch(&vertices, &indices);
-        fs.dispatch(&mut output_surface, &mut depth_attachment, &t, &i);
+
+        let model_matrices = [
+            glam::Mat4::IDENTITY,
+            glam::Mat4::from_rotation_y(std::f32::consts::PI * 0.5),
+            glam::Mat4::from_rotation_y(std::f32::consts::PI * 1.0),
+            glam::Mat4::from_rotation_y(std::f32::consts::PI * 1.5),
+            glam::Mat4::from_rotation_x(std::f32::consts::PI * 0.5),
+            glam::Mat4::from_rotation_x(std::f32::consts::PI * -0.5),
+        ];
+
+        for model in model_matrices { 
+            vs.model = model;  
+            let (t, i) = vs.dispatch(&vertices, &indices);
+            fs.dispatch(&mut output_surface, &mut depth_attachment, &t, &i);
+        }
 
         window.update_with_buffer(output_surface.as_slice(), RESOLUTION_WIDTH, RESOLUTION_HEIGHT).unwrap();
         //dbg!(dt);

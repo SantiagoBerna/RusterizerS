@@ -6,6 +6,7 @@ use super::data::VertexOutput;
 pub struct VertexShader {
     pub view: glam::Mat4,
     pub projection: glam::Mat4,
+    pub model: glam::Mat4
 }
 
 impl VertexShader {
@@ -16,11 +17,11 @@ impl VertexShader {
         ]
     }
 
-    fn world_to_clip_space(vp: &glam::Mat4, positions: &[glam::Vec3; 3]) -> [glam::Vec4; 3] {
+    fn world_to_clip_space(mvp: &glam::Mat4, positions: &[glam::Vec3; 3]) -> [glam::Vec4; 3] {
         [
-            vp.mul_vec4(positions[0].extend(1.0)),
-            vp.mul_vec4(positions[1].extend(1.0)),
-            vp.mul_vec4(positions[2].extend(1.0))
+            mvp.mul_vec4(positions[0].extend(1.0)),
+            mvp.mul_vec4(positions[1].extend(1.0)),
+            mvp.mul_vec4(positions[2].extend(1.0))
         ]
     }
 
@@ -33,7 +34,7 @@ impl VertexShader {
         let mut out_vertex = VertexOutput::default();
 
         //VP and Frustrum
-        let vp = self.projection * self.view;
+        let mvp = self.projection * self.view * self.model;
 
         //Main body
         let mut triangle_start = 0;
@@ -41,7 +42,7 @@ impl VertexShader {
 
             let triangle_indices = VertexShader::triangle_indices(indices, i);
             let vertices = VertexInput::retrieve(&vertex_in.positions, triangle_indices);
-            let clip_coordinates = VertexShader::world_to_clip_space(&vp, &vertices);
+            let clip_coordinates = VertexShader::world_to_clip_space(&mvp, &vertices);
 
             //Frustum clipping
             if math::should_cull_triangle(clip_coordinates[0], clip_coordinates[1], clip_coordinates[2]) { continue; }         
